@@ -12,17 +12,17 @@
 #include <vector>
 
 struct VAOGuard {
-  VAOGuard(GLuint vao) { glBindVertexArray(vao); }
+  VAOGuard(const GLuint vao) { glBindVertexArray(vao); }
   ~VAOGuard() { glBindVertexArray(0); }
 };
 
 struct VBOGuard {
-  VBOGuard(GLuint vbo) { glBindBuffer(GL_ARRAY_BUFFER, vbo); }
+  VBOGuard(const GLuint vbo) { glBindBuffer(GL_ARRAY_BUFFER, vbo); }
   ~VBOGuard() { glBindBuffer(GL_ARRAY_BUFFER, 0); }
 };
 
 struct ProgramGuard {
-  ProgramGuard(GLuint program) { glUseProgram(program); }
+  ProgramGuard(const GLuint program) { glUseProgram(program); }
   ~ProgramGuard() { glUseProgram(0); }
 };
 
