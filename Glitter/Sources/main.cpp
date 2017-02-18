@@ -35,7 +35,7 @@ public:
   }
   void draw() const {
     glBindVertexArray(m_vao);
-    glDrawArrays(GL_TRIANGLES, 0, m_vertices.size());
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
     glBindVertexArray(0);
   }
   void print_vertices() const {
@@ -51,8 +51,10 @@ void setup(std::vector<Shape>& shapes) {
   const GLchar* vshader_src =
     "#version 150\n"
     "in vec2 position;"
+    "out vec4 v_color;"
     "void main() {"
     "  gl_Position = vec4(position, 0.0, 1.0);"
+    "  v_color = vec4(1.0, 0.0, 0.0, 1.0);"
     "}";
   GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vshader, 1, &vshader_src, nullptr);
@@ -65,13 +67,15 @@ void setup(std::vector<Shape>& shapes) {
     GLchar message[1024];
     glGetShaderInfoLog(vshader, 1024, &log_length, message);
     std::cout << message << std::endl;
+    // exit
   }
 
   const GLchar* fshader_src =
     "#version 150\n"
+    "in vec4 v_color;"
     "out vec4 frag_color;"
     "void main() {"
-    "  frag_color = vec4(1.0, 0.0, 0.0, 1.0);"
+    "  frag_color = v_color;"
     "}";
   GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(fshader, 1, &fshader_src, nullptr);
@@ -84,6 +88,7 @@ void setup(std::vector<Shape>& shapes) {
     GLchar message[1024];
     glGetShaderInfoLog(fshader, 1024, &log_length, message);
     std::cout << message << std::endl;
+    // exit
   }
 
   GLuint program = glCreateProgram();
@@ -100,6 +105,7 @@ void setup(std::vector<Shape>& shapes) {
     GLchar message[1024];
     glGetProgramInfoLog(program, 1024, &log_length, message);
     std::cout << message << std::endl;
+    // exit
   }
   glUseProgram(program);
   GLint posAttrib = glGetAttribLocation(program, "position");
@@ -120,8 +126,6 @@ void setup(std::vector<Shape>& shapes) {
 
   std::vector<glm::vec2> s1_vertices = {
     { -0.85, 0.85 },
-    { -0.65, 0.85 },
-    { -0.85, 0.65 },
     { -0.65, 0.85 },
     { -0.85, 0.65 },
     { -0.65, 0.65 }
