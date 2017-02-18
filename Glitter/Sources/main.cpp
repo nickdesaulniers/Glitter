@@ -76,6 +76,22 @@ struct Shape {
   }
 };
 
+GLuint compileShader(const GLenum shader_type, const GLchar* shader_src) {
+  const GLuint shader = glCreateShader(shader_type);
+  glShaderSource(shader, 1, &shader_src, nullptr);
+  glCompileShader(shader);
+  GLint shader_was_compiled;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &shader_was_compiled);
+  if (shader_was_compiled != GL_TRUE) {
+    GLsizei log_length = 0;
+    GLchar message[1024];
+    glGetShaderInfoLog(shader, 1024, &log_length, message);
+    std::cout << message << std::endl;
+    // exit
+  }
+  return shader;
+}
+
 void setup(std::vector<Shape>& shapes) {
   const GLchar* vshader_src =
     "#version 150\n"
@@ -86,19 +102,7 @@ void setup(std::vector<Shape>& shapes) {
     "  gl_Position = vec4(position, 0.0, 1.0);"
     "  v_color = vec4(a_color, 1.0);"
     "}";
-  GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vshader, 1, &vshader_src, nullptr);
-  glCompileShader(vshader);
-
-  GLint vertex_compiled;
-  glGetShaderiv(vshader, GL_COMPILE_STATUS, &vertex_compiled);
-  if (vertex_compiled != GL_TRUE) {
-    GLsizei log_length = 0;
-    GLchar message[1024];
-    glGetShaderInfoLog(vshader, 1024, &log_length, message);
-    std::cout << message << std::endl;
-    // exit
-  }
+  const GLuint vshader = compileShader(GL_VERTEX_SHADER, vshader_src);
 
   const GLchar* fshader_src =
     "#version 150\n"
@@ -107,21 +111,9 @@ void setup(std::vector<Shape>& shapes) {
     "void main() {"
     "  frag_color = v_color;"
     "}";
-  GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fshader, 1, &fshader_src, nullptr);
-  glCompileShader(fshader);
+  const GLuint fshader = compileShader(GL_FRAGMENT_SHADER, fshader_src);
 
-  GLint fragment_compiled;
-  glGetShaderiv(fshader, GL_COMPILE_STATUS, &fragment_compiled);
-  if (fragment_compiled != GL_TRUE) {
-    GLsizei log_length = 0;
-    GLchar message[1024];
-    glGetShaderInfoLog(fshader, 1024, &log_length, message);
-    std::cout << message << std::endl;
-    // exit
-  }
-
-  GLuint program = glCreateProgram();
+  const GLuint program = glCreateProgram();
 
   glAttachShader(program, vshader);
   glAttachShader(program, fshader);
