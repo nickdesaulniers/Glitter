@@ -92,6 +92,23 @@ GLuint compileShader(const GLenum shader_type, const GLchar* shader_src) {
   return shader;
 }
 
+GLuint linkProgram(const GLchar* vertex_shader_src, const GLchar* fragment_shader_src) {
+  const GLuint program = glCreateProgram();
+  glAttachShader(program, compileShader(GL_VERTEX_SHADER, vertex_shader_src));
+  glAttachShader(program, compileShader(GL_FRAGMENT_SHADER, fragment_shader_src));
+  glLinkProgram(program);
+  GLint program_linked;
+  glGetProgramiv(program, GL_LINK_STATUS, &program_linked);
+  if (program_linked != GL_TRUE) {
+    GLsizei log_length = 0;
+    GLchar message[1024];
+    glGetProgramInfoLog(program, 1024, &log_length, message);
+    std::cout << message << std::endl;
+    // exit
+  }
+  return program;
+}
+
 void setup(std::vector<Shape>& shapes) {
   const GLchar* vshader_src =
     "#version 150\n"
@@ -102,7 +119,6 @@ void setup(std::vector<Shape>& shapes) {
     "  gl_Position = vec4(position, 0.0, 1.0);"
     "  v_color = vec4(a_color, 1.0);"
     "}";
-  const GLuint vshader = compileShader(GL_VERTEX_SHADER, vshader_src);
 
   const GLchar* fshader_src =
     "#version 150\n"
@@ -111,24 +127,8 @@ void setup(std::vector<Shape>& shapes) {
     "void main() {"
     "  frag_color = v_color;"
     "}";
-  const GLuint fshader = compileShader(GL_FRAGMENT_SHADER, fshader_src);
 
-  const GLuint program = glCreateProgram();
-
-  glAttachShader(program, vshader);
-  glAttachShader(program, fshader);
-  glBindFragDataLocation(program, 0, "frag_color");
-  glLinkProgram(program);
-
-  GLint program_linked;
-  glGetProgramiv(program, GL_LINK_STATUS, &program_linked);
-  if (program_linked != GL_TRUE) {
-    GLsizei log_length = 0;
-    GLchar message[1024];
-    glGetProgramInfoLog(program, 1024, &log_length, message);
-    std::cout << message << std::endl;
-    // exit
-  }
+  const GLuint program = linkProgram(vshader_src, fshader_src);
 
   std::vector<glm::vec2> t1_vertices = {
     {  0.0f,  0.5f },
