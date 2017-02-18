@@ -27,26 +27,27 @@ public:
     GLint posAttrib = glGetAttribLocation(m_program, "position");
     GLint colorAttrib = glGetAttribLocation(m_program, "a_color");
 
-    bufferStaticData(m_vertices.size() * sizeof(glm::vec2), &m_vertices[0], posAttrib, 2);
-
     // should just use a uniform
     std::vector<glm::vec3> colors;
     for (auto _ : m_vertices) {
       colors.push_back(m_color);
     }
 
-    bufferStaticData(colors.size() * sizeof(glm::vec3), &colors[0], colorAttrib, 3);
+    bufferStaticData(m_vertices, posAttrib);
+    bufferStaticData(colors, colorAttrib);
 
     glBindVertexArray(0);
 
     print_vertices();
   }
-  void bufferStaticData(GLsizeiptr num_bytes, const GLvoid* data, GLuint attribute,
-      GLint elem_per_vertex) const {
+  template <typename T>
+  void bufferStaticData(std::vector<T> data, GLint attribute) const {
+    GLsizeiptr num_bytes = data.size() * sizeof(T);
+    GLint elem_per_vertex = sizeof(T) / sizeof(GLfloat);
     GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, num_bytes, data, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, num_bytes, &data[0], GL_STATIC_DRAW);
     glVertexAttribPointer(attribute, elem_per_vertex, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(attribute);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
