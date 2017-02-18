@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <vector>
 
 #include "ShaderProgram.hpp"
@@ -32,15 +33,15 @@ struct Shape {
   const std::vector<glm::vec2> m_vertices;
   const glm::vec3 m_color;
   GLuint m_vao;
-  const GLuint m_program;
-  Shape(std::vector<glm::vec2> vertices, glm::vec3 color, GLuint program) :
-      m_vertices(std::move(vertices)), m_color(color), m_program(program) {
+  std::shared_ptr<ShaderProgram> m_program;
+  Shape(std::vector<glm::vec2> vertices, glm::vec3 color, std::shared_ptr<ShaderProgram> program) :
+      m_vertices(std::move(vertices)), m_color(color), m_program(std::move(program)) {
     glGenVertexArrays(1, &m_vao);
     VAOGuard vao_guard(m_vao);
 
-    glUseProgram(m_program);
-    const GLint posAttrib = glGetAttribLocation(m_program, "position");
-    const GLint colorAttrib = glGetAttribLocation(m_program, "a_color");
+    glUseProgram(m_program->getProgram());
+    const GLint posAttrib = glGetAttribLocation(m_program->getProgram(), "position");
+    const GLint colorAttrib = glGetAttribLocation(m_program->getProgram(), "a_color");
 
     // should just use a uniform
     std::vector<glm::vec3> colors;
@@ -65,7 +66,7 @@ struct Shape {
     glEnableVertexAttribArray(attribute);
   }
   void draw() const {
-    ProgramGuard program_guard(m_program);
+    ProgramGuard program_guard(m_program->getProgram());
     VAOGuard vao_guard(m_vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
   }
@@ -81,7 +82,10 @@ struct Shape {
 void setup(std::vector<Shape>& shapes) {
 
   // oh boy, Windows paths seem relative to the CWD where the .exe was executed from.
-  ShaderProgram program("Glitter\\Shaders\\hello.vert",
+  //ShaderProgram program("Glitter\\Shaders\\hello.vert",
+  //  "Glitter\\Shaders\\hello.frag");
+
+  auto program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\hello.vert",
     "Glitter\\Shaders\\hello.frag");
 
   std::vector<glm::vec2> t1_vertices = {
@@ -90,7 +94,7 @@ void setup(std::vector<Shape>& shapes) {
     { -0.5f, -0.5f }
   };
   glm::vec3 red = { 1.0, 0.0, 0.0 };
-  shapes.emplace_back(t1_vertices, red, program.getProgram());
+  shapes.emplace_back(t1_vertices, red, program);
 
   std::vector<glm::vec2> t2_vertices = {
     { 0.0f, -0.75f },
@@ -98,7 +102,7 @@ void setup(std::vector<Shape>& shapes) {
     { 0.5f, 0.25f }
   };
   glm::vec3 green = { 0.0, 1.0, 0.0 };
-  shapes.emplace_back(t2_vertices, green, program.getProgram());
+  shapes.emplace_back(t2_vertices, green, program);
 
   std::vector<glm::vec2> s1_vertices = {
     { -0.85, 0.85 },
@@ -107,7 +111,7 @@ void setup(std::vector<Shape>& shapes) {
     { -0.65, 0.65 }
   };
   glm::vec3 blue = { 0.0, 0.0, 1.0 };
-  shapes.emplace_back(s1_vertices, blue, program.getProgram());
+  shapes.emplace_back(s1_vertices, blue, program);
 }
 
 int main(int argc, char * argv[]) {
