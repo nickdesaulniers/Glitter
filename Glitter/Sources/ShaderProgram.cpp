@@ -57,14 +57,15 @@ void ShaderProgram::readAttributes() {
   glGetProgramiv(m_program, GL_ACTIVE_ATTRIBUTES, &num_attributes);
   m_attributes.reserve(num_attributes);
 
-  //for (const GLint& attribute_num : num_attributes) {
   for (GLint i = 0; i < num_attributes; ++i) {
     // attributes cannot have identifiers > 80 chars.
     GLchar attribute[80];
     GLint size;
     GLenum type;
+    
     glGetActiveAttrib(m_program, i, sizeof attribute, nullptr, &size, &type, attribute);
-    m_attributes.insert(std::make_pair<std::string, Attribute>(attribute, { attribute, size, type }));
+    GLint location = glGetAttribLocation(m_program, attribute);
+    m_attributes.emplace(attribute, location);
   }
 }
 
@@ -77,4 +78,8 @@ ShaderProgram::ShaderProgram(const std::string& vertex_shader_fname, const std::
 GLuint ShaderProgram::getProgram() const
 {
   return m_program;
+}
+
+GLint ShaderProgram::getAttribute(const std::string& name) {
+ return m_attributes[name];
 }

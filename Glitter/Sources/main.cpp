@@ -40,7 +40,6 @@ struct Shape {
     VAOGuard vao_guard(m_vao);
 
     glUseProgram(m_program->getProgram());
-    const GLint posAttrib = glGetAttribLocation(m_program->getProgram(), "position");
     const GLint colorAttrib = glGetAttribLocation(m_program->getProgram(), "a_color");
 
     // should just use a uniform
@@ -49,7 +48,7 @@ struct Shape {
       colors.push_back(m_color);
     }
 
-    bufferStaticData(m_vertices, posAttrib);
+    bufferStaticData(m_vertices, m_program->getAttribute("position"));
     bufferStaticData(colors, colorAttrib);
 
     print_vertices();
@@ -82,9 +81,6 @@ struct Shape {
 void setup(std::vector<Shape>& shapes) {
 
   // oh boy, Windows paths seem relative to the CWD where the .exe was executed from.
-  //ShaderProgram program("Glitter\\Shaders\\hello.vert",
-  //  "Glitter\\Shaders\\hello.frag");
-
   auto program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\hello.vert",
     "Glitter\\Shaders\\hello.frag");
 
