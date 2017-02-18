@@ -16,7 +16,6 @@ public:
   const std::vector<glm::vec2> m_vertices;
   const glm::vec3 m_color;
   GLuint m_vao;
-  GLuint m_vbo;
   const GLuint m_program;
   Shape(std::vector<glm::vec2> vertices, glm::vec3 color, GLuint program) :
       m_vertices(std::move(vertices)), m_color(color), m_program(program) {
@@ -24,14 +23,11 @@ public:
     glBindVertexArray(m_vao);
 
     glUseProgram(m_program);
-    GLint posAttrib = glGetAttribLocation(m_program, "position");
-    GLint colorAttrib = glGetAttribLocation(m_program, "a_color");
+    const GLint posAttrib = glGetAttribLocation(m_program, "position");
+    const GLint colorAttrib = glGetAttribLocation(m_program, "a_color");
 
     // should just use a uniform
-    std::vector<glm::vec3> colors;
-    for (auto _ : m_vertices) {
-      colors.push_back(m_color);
-    }
+    std::vector<glm::vec3> colors = { m_color, m_color, m_color };
 
     bufferStaticData(m_vertices, posAttrib);
     bufferStaticData(colors, colorAttrib);
@@ -41,9 +37,9 @@ public:
     print_vertices();
   }
   template <typename T>
-  void bufferStaticData(std::vector<T> data, GLint attribute) const {
-    GLsizeiptr num_bytes = data.size() * sizeof(T);
-    GLint elem_per_vertex = sizeof(T) / sizeof(GLfloat);
+  void bufferStaticData(const std::vector<T>& data, const GLint attribute) const {
+    const GLsizeiptr num_bytes = data.size() * sizeof(T);
+    constexpr GLint elem_per_vertex = sizeof(T) / sizeof(float);
     GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -57,6 +53,7 @@ public:
     glBindVertexArray(m_vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
     glBindVertexArray(0);
+    glUseProgram(0);
   }
   void print_vertices() const {
     std::cout << "created polygon with " << m_vertices.size() << " vertices {" << std::endl;
