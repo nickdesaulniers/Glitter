@@ -104,13 +104,29 @@ void setup(std::vector<Shape>& shapes) {
   glUseProgram(program);
   GLint posAttrib = glGetAttribLocation(program, "position");
 
-  std::vector<glm::vec2> vertices = {
+  std::vector<glm::vec2> t1_vertices = {
     {  0.0f,  0.5f },
     {  0.5f, -0.5f },
     { -0.5f, -0.5f }
   };
-  Shape triangle(vertices, posAttrib);
-  shapes.push_back(triangle);
+  shapes.emplace_back(t1_vertices, posAttrib);
+
+  std::vector<glm::vec2> t2_vertices = {
+    { 0.0f, -0.75f },
+    { -0.5f, 0.25f },
+    { 0.5f, 0.25f }
+  };
+  shapes.emplace_back(t2_vertices, posAttrib);
+
+  std::vector<glm::vec2> s1_vertices = {
+    { -0.85, 0.85 },
+    { -0.65, 0.85 },
+    { -0.85, 0.65 },
+    { -0.65, 0.85 },
+    { -0.85, 0.65 },
+    { -0.65, 0.65 }
+  };
+  shapes.emplace_back(s1_vertices, posAttrib);
 }
 
 int main(int argc, char * argv[]) {
