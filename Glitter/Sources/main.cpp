@@ -11,8 +11,22 @@
 #include <iostream>
 #include <vector>
 
-class Shape {
-public:
+struct VAOGuard {
+  VAOGuard(GLuint vao) { glBindVertexArray(vao); }
+  ~VAOGuard() { glBindVertexArray(0); }
+};
+
+struct VBOGuard {
+  VBOGuard(GLuint vbo) { glBindBuffer(GL_ARRAY_BUFFER, vbo); }
+  ~VBOGuard() { glBindBuffer(GL_ARRAY_BUFFER, 0); }
+};
+
+struct ProgramGuard {
+  ProgramGuard(GLuint program) { glUseProgram(program); }
+  ~ProgramGuard() { glUseProgram(0); }
+};
+
+struct Shape {
   const std::vector<glm::vec2> m_vertices;
   const glm::vec3 m_color;
   GLuint m_vao;
@@ -20,19 +34,20 @@ public:
   Shape(std::vector<glm::vec2> vertices, glm::vec3 color, GLuint program) :
       m_vertices(std::move(vertices)), m_color(color), m_program(program) {
     glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
+    VAOGuard vao_guard(m_vao);
 
     glUseProgram(m_program);
     const GLint posAttrib = glGetAttribLocation(m_program, "position");
     const GLint colorAttrib = glGetAttribLocation(m_program, "a_color");
 
     // should just use a uniform
-    std::vector<glm::vec3> colors = { m_color, m_color, m_color };
+    std::vector<glm::vec3> colors;
+    for (auto _ : m_vertices) {
+      colors.push_back(m_color);
+    }
 
     bufferStaticData(m_vertices, posAttrib);
     bufferStaticData(colors, colorAttrib);
-
-    glBindVertexArray(0);
 
     print_vertices();
   }
@@ -42,18 +57,15 @@ public:
     constexpr GLint elem_per_vertex = sizeof(T) / sizeof(float);
     GLuint vbo;
     glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    VBOGuard vbo_guard(vbo);
     glBufferData(GL_ARRAY_BUFFER, num_bytes, &data[0], GL_STATIC_DRAW);
     glVertexAttribPointer(attribute, elem_per_vertex, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(attribute);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
   void draw() const {
-    glUseProgram(m_program);
-    glBindVertexArray(m_vao);
+    ProgramGuard program_guard(m_program);
+    VAOGuard vao_guard(m_vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
-    glBindVertexArray(0);
-    glUseProgram(0);
   }
   void print_vertices() const {
     std::cout << "created polygon with " << m_vertices.size() << " vertices {" << std::endl;
