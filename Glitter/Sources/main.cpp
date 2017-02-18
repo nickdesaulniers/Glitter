@@ -13,27 +13,47 @@
 
 class Shape {
 public:
-  std::vector<glm::vec2> m_vertices;
+  const std::vector<glm::vec2> m_vertices;
+  const glm::vec3 m_color;
   GLuint m_vao;
   GLuint m_vbo;
-  GLint m_posAttrib;
-  Shape(std::vector<glm::vec2> vertices, GLint posAttrib): m_vertices(std::move(vertices)),
-      m_posAttrib(posAttrib) {
+  const GLuint m_program;
+  Shape(std::vector<glm::vec2> vertices, glm::vec3 color, GLuint program) :
+      m_vertices(std::move(vertices)), m_color(color), m_program(program) {
     glGenVertexArrays(1, &m_vao);
     glBindVertexArray(m_vao);
+
+    glUseProgram(m_program);
+    GLint posAttrib = glGetAttribLocation(m_program, "position");
+    GLint colorAttrib = glGetAttribLocation(m_program, "a_color");
 
     glGenBuffers(1, &m_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(glm::vec2), &m_vertices[0], GL_STATIC_DRAW);
-
-    glVertexAttribPointer(m_posAttrib, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(m_posAttrib);
+    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(posAttrib);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // should just use a uniform
+    std::vector<glm::vec3> colors;
+    for (auto _ : m_vertices) {
+      colors.push_back(m_color);
+    }
+
+    GLuint color_vbo;
+    glGenBuffers(1, &color_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, color_vbo);
+    glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(glm::vec3), &colors[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(colorAttrib);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
     glBindVertexArray(0);
 
     print_vertices();
   }
   void draw() const {
+    glUseProgram(m_program);
     glBindVertexArray(m_vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
     glBindVertexArray(0);
@@ -51,10 +71,11 @@ void setup(std::vector<Shape>& shapes) {
   const GLchar* vshader_src =
     "#version 150\n"
     "in vec2 position;"
+    "in vec3 a_color;"
     "out vec4 v_color;"
     "void main() {"
     "  gl_Position = vec4(position, 0.0, 1.0);"
-    "  v_color = vec4(1.0, 0.0, 0.0, 1.0);"
+    "  v_color = vec4(a_color, 1.0);"
     "}";
   GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vshader, 1, &vshader_src, nullptr);
@@ -107,22 +128,22 @@ void setup(std::vector<Shape>& shapes) {
     std::cout << message << std::endl;
     // exit
   }
-  glUseProgram(program);
-  GLint posAttrib = glGetAttribLocation(program, "position");
 
   std::vector<glm::vec2> t1_vertices = {
     {  0.0f,  0.5f },
     {  0.5f, -0.5f },
     { -0.5f, -0.5f }
   };
-  shapes.emplace_back(t1_vertices, posAttrib);
+  glm::vec3 red = { 1.0, 0.0, 0.0 };
+  shapes.emplace_back(t1_vertices, red, program);
 
   std::vector<glm::vec2> t2_vertices = {
     { 0.0f, -0.75f },
     { -0.5f, 0.25f },
     { 0.5f, 0.25f }
   };
-  shapes.emplace_back(t2_vertices, posAttrib);
+  glm::vec3 green = { 0.0, 1.0, 0.0 };
+  shapes.emplace_back(t2_vertices, green, program);
 
   std::vector<glm::vec2> s1_vertices = {
     { -0.85, 0.85 },
@@ -130,7 +151,8 @@ void setup(std::vector<Shape>& shapes) {
     { -0.85, 0.65 },
     { -0.65, 0.65 }
   };
-  shapes.emplace_back(s1_vertices, posAttrib);
+  glm::vec3 blue = { 0.0, 0.0, 1.0 };
+  shapes.emplace_back(s1_vertices, blue, program);
 }
 
 int main(int argc, char * argv[]) {
