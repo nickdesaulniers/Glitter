@@ -51,9 +51,27 @@ static std::string fname_to_string(const std::string& fname) {
   return std::string();
 }
 
+void ShaderProgram::readAttributes() {
+  GLint num_attributes;
+
+  glGetProgramiv(m_program, GL_ACTIVE_ATTRIBUTES, &num_attributes);
+  m_attributes.reserve(num_attributes);
+
+  //for (const GLint& attribute_num : num_attributes) {
+  for (GLint i = 0; i < num_attributes; ++i) {
+    // attributes cannot have identifiers > 80 chars.
+    GLchar attribute[80];
+    GLint size;
+    GLenum type;
+    glGetActiveAttrib(m_program, i, sizeof attribute, nullptr, &size, &type, attribute);
+    m_attributes.insert(std::make_pair<std::string, Attribute>(attribute, { attribute, size, type }));
+  }
+}
+
 ShaderProgram::ShaderProgram(const std::string& vertex_shader_fname, const std::string& fragment_shader_fname) {
   m_program = linkProgram(fname_to_string(vertex_shader_fname).c_str(),
     fname_to_string(fragment_shader_fname).c_str());
+  readAttributes();
 }
 
 GLuint ShaderProgram::getProgram() const

@@ -11,6 +11,8 @@
 #include <iostream>
 #include <vector>
 
+#include "ShaderProgram.hpp"
+
 struct VAOGuard {
   VAOGuard(const GLuint vao) { glBindVertexArray(vao); }
   ~VAOGuard() { glBindVertexArray(0); }
@@ -76,59 +78,11 @@ struct Shape {
   }
 };
 
-GLuint compileShader(const GLenum shader_type, const GLchar* shader_src) {
-  const GLuint shader = glCreateShader(shader_type);
-  glShaderSource(shader, 1, &shader_src, nullptr);
-  glCompileShader(shader);
-  GLint shader_was_compiled;
-  glGetShaderiv(shader, GL_COMPILE_STATUS, &shader_was_compiled);
-  if (shader_was_compiled != GL_TRUE) {
-    GLsizei log_length = 0;
-    GLchar message[1024];
-    glGetShaderInfoLog(shader, 1024, &log_length, message);
-    std::cout << message << std::endl;
-    // exit
-  }
-  return shader;
-}
-
-GLuint linkProgram(const GLchar* vertex_shader_src, const GLchar* fragment_shader_src) {
-  const GLuint program = glCreateProgram();
-  glAttachShader(program, compileShader(GL_VERTEX_SHADER, vertex_shader_src));
-  glAttachShader(program, compileShader(GL_FRAGMENT_SHADER, fragment_shader_src));
-  glLinkProgram(program);
-  GLint program_linked;
-  glGetProgramiv(program, GL_LINK_STATUS, &program_linked);
-  if (program_linked != GL_TRUE) {
-    GLsizei log_length = 0;
-    GLchar message[1024];
-    glGetProgramInfoLog(program, 1024, &log_length, message);
-    std::cout << message << std::endl;
-    // exit
-  }
-  return program;
-}
-
 void setup(std::vector<Shape>& shapes) {
-  const GLchar* vshader_src =
-    "#version 150\n"
-    "in vec2 position;"
-    "in vec3 a_color;"
-    "out vec4 v_color;"
-    "void main() {"
-    "  gl_Position = vec4(position, 0.0, 1.0);"
-    "  v_color = vec4(a_color, 1.0);"
-    "}";
 
-  const GLchar* fshader_src =
-    "#version 150\n"
-    "in vec4 v_color;"
-    "out vec4 frag_color;"
-    "void main() {"
-    "  frag_color = v_color;"
-    "}";
-
-  const GLuint program = linkProgram(vshader_src, fshader_src);
+  // oh boy, Windows paths seem relative to the CWD where the .exe was executed from.
+  ShaderProgram program("Glitter\\Shaders\\hello.vert",
+    "Glitter\\Shaders\\hello.frag");
 
   std::vector<glm::vec2> t1_vertices = {
     {  0.0f,  0.5f },
@@ -136,7 +90,7 @@ void setup(std::vector<Shape>& shapes) {
     { -0.5f, -0.5f }
   };
   glm::vec3 red = { 1.0, 0.0, 0.0 };
-  shapes.emplace_back(t1_vertices, red, program);
+  shapes.emplace_back(t1_vertices, red, program.getProgram());
 
   std::vector<glm::vec2> t2_vertices = {
     { 0.0f, -0.75f },
@@ -144,7 +98,7 @@ void setup(std::vector<Shape>& shapes) {
     { 0.5f, 0.25f }
   };
   glm::vec3 green = { 0.0, 1.0, 0.0 };
-  shapes.emplace_back(t2_vertices, green, program);
+  shapes.emplace_back(t2_vertices, green, program.getProgram());
 
   std::vector<glm::vec2> s1_vertices = {
     { -0.85, 0.85 },
@@ -153,7 +107,7 @@ void setup(std::vector<Shape>& shapes) {
     { -0.65, 0.65 }
   };
   glm::vec3 blue = { 0.0, 0.0, 1.0 };
-  shapes.emplace_back(s1_vertices, blue, program);
+  shapes.emplace_back(s1_vertices, blue, program.getProgram());
 }
 
 int main(int argc, char * argv[]) {
