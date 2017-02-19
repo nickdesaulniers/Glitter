@@ -31,9 +31,10 @@ struct ProgramGuard {
 };
 
 struct Shape {
-  const std::vector<glm::vec2> m_vertices;
+  std::vector<glm::vec2> m_vertices;
   const glm::vec3 m_color;
   GLuint m_vao;
+  GLuint m_vertices_vbo;
   std::shared_ptr<ShaderProgram> m_program;
   Shape(std::vector<glm::vec2> vertices, glm::vec3 color, std::shared_ptr<ShaderProgram> program) :
       m_vertices(std::move(vertices)), m_color(color), m_program(std::move(program)) {
@@ -48,13 +49,13 @@ struct Shape {
       colors.push_back(m_color);
     }
 
-    bufferStaticData(m_vertices, m_program->getAttribute("aPosition"));
+    m_vertices_vbo = bufferStaticData(m_vertices, m_program->getAttribute("aPosition"));
     bufferStaticData(colors, m_program->getAttribute("aColor"));
 
     print_vertices();
   }
   template <typename T>
-  void bufferStaticData(const std::vector<T>& data, const GLint attribute) const {
+  GLuint bufferStaticData(const std::vector<T>& data, const GLint attribute) const {
     const GLsizeiptr num_bytes = data.size() * sizeof(T);
     constexpr GLint elem_per_vertex = sizeof(T) / sizeof(float);
     GLuint vbo;
@@ -63,6 +64,7 @@ struct Shape {
     glBufferData(GL_ARRAY_BUFFER, num_bytes, &data[0], GL_STATIC_DRAW);
     glVertexAttribPointer(attribute, elem_per_vertex, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(attribute);
+    return vbo;
   }
   void draw() const {
     ProgramGuard program_guard(m_program->getProgram());
@@ -70,14 +72,24 @@ struct Shape {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
   }
   void print_vertices() const {
-    std::cout << "created polygon with " << m_vertices.size() << " vertices {" << std::endl;
+    std::cout << "polygon with " << m_vertices.size() << " vertices {" << std::endl;
     for (const glm::vec2& vertex_pair : m_vertices) {
       std::cout << "  " << vertex_pair[0] << ", " << vertex_pair[1] << std::endl;
     }
     std::cout << "}" << std::endl;
   }
-  void move_up() {
-    std::cout << "move me up!" << std::endl;
+  void rebuffer_vertices() {
+    const GLsizeiptr num_bytes = m_vertices.size() * sizeof(glm::vec2);
+    constexpr GLint elem_per_vertex = sizeof(glm::vec2) / sizeof(float);
+    VBOGuard vbo_guard(m_vertices_vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, num_bytes, &m_vertices[0]);
+    print_vertices();
+  }
+  void move(const glm::vec2& dxdy) {
+    for (auto& vertex : m_vertices) {
+      vertex += dxdy;
+    }
+    rebuffer_vertices();
   }
 };
 
@@ -134,7 +146,13 @@ void handle_input(GLFWwindow* const window, std::vector<Shape>& shapes) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, true);
   } else if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-    shapes.back().move_up();
+    shapes.back().move(glm::vec2(0.0f, 0.1f));
+  } else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+    shapes.back().move(glm::vec2(0.0f, -0.1f));
+  } else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+    shapes.back().move(glm::vec2(-0.1f, 0.0f));
+  } else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+    shapes.back().move(glm::vec2(0.1f, 0.0f));
   }
 }
 
@@ -177,7 +195,7 @@ int main(int argc, char * argv[]) {
 
     // Flip Buffers and Draw
     glfwSwapBuffers(mWindow);
-    glfwPollEvents();
+    glfwWaitEvents();
   }
 
   glfwTerminate();
