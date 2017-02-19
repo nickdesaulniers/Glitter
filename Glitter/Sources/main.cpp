@@ -75,6 +75,9 @@ struct Shape {
     }
     std::cout << "}" << std::endl;
   }
+  void move_up() {
+    std::cout << "move me up!" << std::endl;
+  }
 };
 
 void setup(std::vector<Shape>& shapes) {
@@ -109,6 +112,14 @@ void setup(std::vector<Shape>& shapes) {
   shapes.emplace_back(s1_vertices, blue, program);
 }
 
+void handle_input(GLFWwindow* const window, std::vector<Shape>& shapes) {
+  if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+    glfwSetWindowShouldClose(window, true);
+  } else if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+    shapes.back().move_up();
+  }
+}
+
 int main(int argc, char * argv[]) {
 
   // Load GLFW and Create a Window
@@ -136,8 +147,7 @@ int main(int argc, char * argv[]) {
 
   // Rendering Loop
   while (glfwWindowShouldClose(mWindow) == false) {
-    if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-      glfwSetWindowShouldClose(mWindow, true);
+    handle_input(mWindow, shapes);
 
     // Background Fill Color
     glClearColor(0.25f, 0.5f, 0.25f, 1.0f);
