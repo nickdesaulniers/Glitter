@@ -145,14 +145,13 @@ void setup(std::vector<Shape>& shapes) {
 void handle_input(GLFWwindow* const window, std::vector<Shape>& shapes) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, true);
-  } else if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-    shapes.back().move(glm::vec2(0.0f, 0.1f));
-  } else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-    shapes.back().move(glm::vec2(0.0f, -0.1f));
-  } else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-    shapes.back().move(glm::vec2(-0.1f, 0.0f));
-  } else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-    shapes.back().move(glm::vec2(0.1f, 0.0f));
+  }
+  int up_pressed = glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS;
+  int down_pressed = glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS;
+  int left_pressed = glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS;
+  int right_pressed = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
+  bool dirty = up_pressed || down_pressed || left_pressed || right_pressed;
+  if (dirty) {
   }
 }
 
