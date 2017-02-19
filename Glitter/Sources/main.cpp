@@ -152,6 +152,8 @@ void handle_input(GLFWwindow* const window, std::vector<Shape>& shapes) {
   int right_pressed = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
   bool dirty = up_pressed || down_pressed || left_pressed || right_pressed;
   if (dirty) {
+    shapes.back().move(glm::vec2(0.1 * static_cast<float>(right_pressed - left_pressed),
+      0.1 * static_cast<float>(up_pressed - down_pressed)));
   }
 }
 
