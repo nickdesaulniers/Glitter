@@ -59,27 +59,50 @@ void ShaderProgram::readAttributes() {
 
   for (GLint i = 0; i < num_attributes; ++i) {
     // attributes cannot have identifiers > 80 chars.
-    GLchar attribute[80];
+    GLchar identifier[80];
     GLint size;
     GLenum type;
     
-    glGetActiveAttrib(m_program, i, sizeof attribute, nullptr, &size, &type, attribute);
-    GLint location = glGetAttribLocation(m_program, attribute);
-    m_attributes.emplace(attribute, location);
+    glGetActiveAttrib(m_program, i, sizeof identifier, nullptr, &size, &type, identifier);
+    GLint location = glGetAttribLocation(m_program, identifier);
+    m_attributes.emplace(identifier, location);
   }
+}
+
+void ShaderProgram::readUniforms() {
+  GLint num_uniforms;
+
+  glGetProgramiv(m_program, GL_ACTIVE_UNIFORMS, &num_uniforms);
+  m_uniforms.reserve(num_uniforms);
+
+  for (GLint i = 0; i < num_uniforms; ++i) {
+    // uniforms cannot have identifiers > 80 chars.
+    GLchar identifier[80];
+    GLint size;
+    GLenum type;
+    
+    glGetActiveUniform(m_program, i, sizeof identifier, nullptr, &size, &type, identifier);
+    GLint location = glGetUniformLocation(m_program, identifier);
+    m_uniforms.emplace(identifier, location);
+  }
+
 }
 
 ShaderProgram::ShaderProgram(const std::string& vertex_shader_fname, const std::string& fragment_shader_fname) {
   m_program = linkProgram(fname_to_string(vertex_shader_fname).c_str(),
     fname_to_string(fragment_shader_fname).c_str());
   readAttributes();
+  readUniforms();
 }
 
-GLuint ShaderProgram::getProgram() const
-{
+GLuint ShaderProgram::getProgram() const {
   return m_program;
 }
 
 GLint ShaderProgram::getAttribute(const std::string& name) {
- return m_attributes[name];
+ return m_attributes.at(name);
+}
+
+GLint ShaderProgram::getUniform(const std::string & name) {
+  return m_uniforms.at(name);
 }

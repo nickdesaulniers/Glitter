@@ -11,6 +11,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "ShaderProgram.hpp"
 
@@ -47,8 +48,8 @@ struct Shape {
       colors.push_back(m_color);
     }
 
-    bufferStaticData(m_vertices, m_program->getAttribute("position"));
-    bufferStaticData(colors, m_program->getAttribute("a_color"));
+    bufferStaticData(m_vertices, m_program->getAttribute("aPosition"));
+    bufferStaticData(colors, m_program->getAttribute("aColor"));
 
     print_vertices();
   }
@@ -80,6 +81,21 @@ struct Shape {
   }
 };
 
+void setUniforms(std::shared_ptr<ShaderProgram> program) {
+  glm::mat4 model(1.0f);
+  glUniformMatrix4fv(program->getUniform("uModelMatrix"), 1, false, glm::value_ptr(model));
+
+  glm::vec3 eye(4.0, 4.0, 3.0);
+  glm::vec3 center(0.0, 0.0, 0.0);
+  glm::vec3 up(0.0, 1.0, 0.0);
+  glm::mat4 view = glm::lookAt(eye, center, up);
+  glUniformMatrix4fv(program->getUniform("uViewMatrix"), 1, false, glm::value_ptr(view));
+
+  float aspect_ratio = static_cast<float>(mWidth) / static_cast<float>(mHeight);
+  glm::mat4 proj = glm::perspective(glm::radians(45.0f), aspect_ratio, 1.0f, 10.0f);
+  glUniformMatrix4fv(program->getUniform("uProjMatrix"), 1, false, glm::value_ptr(proj));
+}
+
 void setup(std::vector<Shape>& shapes) {
 
   // oh boy, Windows paths seem relative to the CWD where the .exe was executed from.
@@ -110,6 +126,8 @@ void setup(std::vector<Shape>& shapes) {
   };
   glm::vec3 blue = { 0.0, 0.0, 1.0 };
   shapes.emplace_back(s1_vertices, blue, program);
+
+  setUniforms(program);
 }
 
 void handle_input(GLFWwindow* const window, std::vector<Shape>& shapes) {
