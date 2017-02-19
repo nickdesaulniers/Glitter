@@ -40,7 +40,6 @@ struct Shape {
     VAOGuard vao_guard(m_vao);
 
     glUseProgram(m_program->getProgram());
-    const GLint colorAttrib = glGetAttribLocation(m_program->getProgram(), "a_color");
 
     // should just use a uniform
     std::vector<glm::vec3> colors;
@@ -49,7 +48,7 @@ struct Shape {
     }
 
     bufferStaticData(m_vertices, m_program->getAttribute("position"));
-    bufferStaticData(colors, colorAttrib);
+    bufferStaticData(colors, m_program->getAttribute("a_color"));
 
     print_vertices();
   }
