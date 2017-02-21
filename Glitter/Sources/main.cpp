@@ -14,6 +14,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "ShaderProgram.hpp"
+#include "TextureLoader.hpp"
 
 struct VAOGuard {
   VAOGuard(const GLuint vao) { glBindVertexArray(vao); }
@@ -32,25 +33,16 @@ struct ProgramGuard {
 
 struct Shape {
   std::vector<glm::vec2> m_vertices;
-  const glm::vec3 m_color;
   GLuint m_vao;
   GLuint m_vertices_vbo;
   std::shared_ptr<ShaderProgram> m_program;
-  Shape(std::vector<glm::vec2> vertices, glm::vec3 color, std::shared_ptr<ShaderProgram> program) :
-      m_vertices(std::move(vertices)), m_color(color), m_program(std::move(program)) {
+  Shape(std::vector<glm::vec2> vertices, std::shared_ptr<ShaderProgram> program) :
+      m_vertices(std::move(vertices)), m_program(program) {
+    glUseProgram(m_program->getProgram());
     glGenVertexArrays(1, &m_vao);
     VAOGuard vao_guard(m_vao);
 
-    glUseProgram(m_program->getProgram());
-
-    // should just use a uniform
-    std::vector<glm::vec3> colors;
-    for (auto _ : m_vertices) {
-      colors.push_back(m_color);
-    }
-
     m_vertices_vbo = bufferStaticData(m_vertices, m_program->getAttribute("aPosition"));
-    bufferStaticData(colors, m_program->getAttribute("aColor"));
 
     print_vertices();
   }
@@ -66,11 +58,7 @@ struct Shape {
     glEnableVertexAttribArray(attribute);
     return vbo;
   }
-  void draw() const {
-    ProgramGuard program_guard(m_program->getProgram());
-    VAOGuard vao_guard(m_vao);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
-  }
+  virtual void draw() const = 0;
   void print_vertices() const {
     std::cout << "polygon with " << m_vertices.size() << " vertices {" << std::endl;
     for (const glm::vec2& vertex_pair : m_vertices) {
@@ -93,6 +81,19 @@ struct Shape {
   }
 };
 
+struct ColoredShape: public Shape {
+  const glm::vec3 m_color;
+  std::shared_ptr<ShaderProgram> m_program;
+  ColoredShape(std::vector<glm::vec2> vertices, glm::vec3 color, std::shared_ptr<ShaderProgram> program):
+      Shape(vertices, program), m_color(color), m_program(program) {};
+  virtual void draw() const {
+    ProgramGuard program_guard(m_program->getProgram());
+    VAOGuard vao_guard(m_vao);
+    glUniform3fv(m_program->getUniform("uColor"), 1, glm::value_ptr(m_color));
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
+  }
+};
+
 void setUniforms(std::shared_ptr<ShaderProgram> program) {
   glm::mat4 model(1.0f);
   glUniformMatrix4fv(program->getUniform("uModelMatrix"), 1, false, glm::value_ptr(model));
@@ -108,7 +109,7 @@ void setUniforms(std::shared_ptr<ShaderProgram> program) {
   glUniformMatrix4fv(program->getUniform("uProjMatrix"), 1, false, glm::value_ptr(proj));
 }
 
-void setup(std::vector<Shape>& shapes) {
+void setup(std::vector<Shape*>& shapes) {
 
   // oh boy, Windows paths seem relative to the CWD where the .exe was executed from.
   auto program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\hello.vert",
@@ -120,7 +121,7 @@ void setup(std::vector<Shape>& shapes) {
     { -0.5f, -0.5f }
   };
   glm::vec3 red = { 1.0, 0.0, 0.0 };
-  shapes.emplace_back(t1_vertices, red, program);
+  shapes.push_back( new ColoredShape(t1_vertices, red, program));
 
   std::vector<glm::vec2> t2_vertices = {
     { 0.0f, -0.75f },
@@ -128,7 +129,7 @@ void setup(std::vector<Shape>& shapes) {
     { 0.5f, 0.25f }
   };
   glm::vec3 green = { 0.0, 1.0, 0.0 };
-  shapes.emplace_back(t2_vertices, green, program);
+  shapes.push_back(new ColoredShape(t2_vertices, green, program));
 
   std::vector<glm::vec2> s1_vertices = {
     { -0.85, 0.85 },
@@ -137,12 +138,12 @@ void setup(std::vector<Shape>& shapes) {
     { -0.65, 0.65 }
   };
   glm::vec3 blue = { 0.0, 0.0, 1.0 };
-  shapes.emplace_back(s1_vertices, blue, program);
+  shapes.push_back(new ColoredShape(s1_vertices, blue, program));
 
   setUniforms(program);
 }
 
-void handle_input(GLFWwindow* const window, std::vector<Shape>& shapes) {
+void handle_input(GLFWwindow* const window, std::vector<Shape*>& shapes) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, true);
   }
@@ -152,7 +153,7 @@ void handle_input(GLFWwindow* const window, std::vector<Shape>& shapes) {
   int right_pressed = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
   bool dirty = up_pressed || down_pressed || left_pressed || right_pressed;
   if (dirty) {
-    shapes.back().move(glm::vec2(0.1 * static_cast<float>(right_pressed - left_pressed),
+    shapes.back()->move(glm::vec2(0.1 * static_cast<float>(right_pressed - left_pressed),
       0.1 * static_cast<float>(up_pressed - down_pressed)));
   }
 }
@@ -179,7 +180,7 @@ int main(int argc, char * argv[]) {
   gladLoadGL();
   fprintf(stderr, "OpenGL %s\n", glGetString(GL_VERSION));
 
-  std::vector<Shape> shapes;
+  std::vector<Shape*> shapes;
   setup(shapes);
 
   // Rendering Loop
@@ -190,8 +191,8 @@ int main(int argc, char * argv[]) {
     glClearColor(0.25f, 0.5f, 0.25f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    for (const Shape& shape: shapes) {
-      shape.draw();
+    for (const Shape* shape: shapes) {
+      shape->draw();
     }
 
     // Flip Buffers and Draw

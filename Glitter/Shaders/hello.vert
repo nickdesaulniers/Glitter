@@ -1,8 +1,8 @@
 #version 150
 
 in vec4 aPosition;
-in vec4 aColor;
 
+uniform vec3 uColor;
 uniform mat4 uModelMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uProjMatrix;
@@ -13,5 +13,5 @@ void main () {
   // I wasted 2 days on this example because Matrix Multiplication is NOT
   // Communitive!
   gl_Position = uProjMatrix * uViewMatrix * uModelMatrix *  aPosition;
-  vColor = aColor;
+  vColor = vec4(uColor, 1.0);
 }
