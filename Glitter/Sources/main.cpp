@@ -118,6 +118,7 @@ static void setup() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   // Load, create texture and generate mipmaps
   int width, height, n;
+  const std::string texture_fname = "Glitter\\Textures\\android.jpg";
   unsigned char* data = stbi_load(texture_fname.c_str(), &width, &height, &n, 0);
   if (data = nullptr) {
     std::cout << "failed to load " << texture_fname << std::endl;
