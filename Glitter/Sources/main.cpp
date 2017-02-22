@@ -11,187 +11,136 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <fstream>
+#include <sstream>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "ShaderProgram.hpp"
-#include "TextureLoader.hpp"
+GLuint program;
+GLuint texture1;
+GLuint VBO, VAO, EBO;
 
-struct VAOGuard {
-  VAOGuard(const GLuint vao) { glBindVertexArray(vao); }
-  ~VAOGuard() { glBindVertexArray(0); }
-};
-
-struct VBOGuard {
-  VBOGuard(const GLuint vbo) { glBindBuffer(GL_ARRAY_BUFFER, vbo); }
-  ~VBOGuard() { glBindBuffer(GL_ARRAY_BUFFER, 0); }
-};
-
-struct ProgramGuard {
-  ProgramGuard(const GLuint program) { glUseProgram(program); }
-  ~ProgramGuard() { glUseProgram(0); }
-};
-
-struct Shape {
-  std::vector<glm::vec2> m_vertices;
-  GLuint m_vao;
-  GLuint m_vertices_vbo;
-  std::shared_ptr<ShaderProgram> m_program;
-  Shape(std::vector<glm::vec2> vertices, std::shared_ptr<ShaderProgram> program) :
-      m_vertices(std::move(vertices)), m_program(program) {
-    ProgramGuard program_guard(m_program->getProgram());
-    glGenVertexArrays(1, &m_vao);
-    VAOGuard vao_guard(m_vao);
-
-    m_vertices_vbo = bufferStaticData(m_vertices, m_program->getAttribute("aPosition"));
-
-    //print_vertices();
+static GLuint compileShader(const GLenum shader_type, const GLchar* shader_src) {
+  const GLuint shader = glCreateShader(shader_type);
+  glShaderSource(shader, 1, &shader_src, nullptr);
+  glCompileShader(shader);
+  GLint shader_was_compiled;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &shader_was_compiled);
+  if (shader_was_compiled != GL_TRUE) {
+    GLsizei log_length = 0;
+    GLchar message[1024];
+    glGetShaderInfoLog(shader, 1024, &log_length, message);
+    std::cout << message << std::endl;
+    // exit
   }
-  template <typename T>
-  GLuint bufferStaticData(const std::vector<T>& data, const GLint attribute) const {
-    const GLsizeiptr num_bytes = data.size() * sizeof(T);
-    constexpr GLint elem_per_vertex = sizeof(T) / sizeof(float);
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    VBOGuard vbo_guard(vbo);
-    glBufferData(GL_ARRAY_BUFFER, num_bytes, &data[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(attribute, elem_per_vertex, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(attribute);
-    return vbo;
-  }
-  virtual void draw() const = 0;
-  void print_vertices() const {
-    std::cout << "polygon with " << m_vertices.size() << " vertices {" << std::endl;
-    for (const glm::vec2& vertex_pair : m_vertices) {
-      std::cout << "  " << vertex_pair[0] << ", " << vertex_pair[1] << std::endl;
-    }
-    std::cout << "}" << std::endl;
-  }
-  void rebuffer_vertices() {
-    const GLsizeiptr num_bytes = m_vertices.size() * sizeof(glm::vec2);
-    constexpr GLint elem_per_vertex = sizeof(glm::vec2) / sizeof(float);
-    VBOGuard vbo_guard(m_vertices_vbo);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, num_bytes, &m_vertices[0]);
-    //print_vertices();
-  }
-  void move(const glm::vec2& dxdy) {
-    for (auto& vertex : m_vertices) {
-      vertex += dxdy;
-    }
-    rebuffer_vertices();
-  }
-};
-
-struct ColoredShape: public Shape {
-  const glm::vec3 m_color;
-  ColoredShape(std::vector<glm::vec2> vertices, glm::vec3 color, std::shared_ptr<ShaderProgram> program):
-      Shape(vertices, program), m_color(color) {};
-  virtual void draw() const {
-    ProgramGuard program_guard(m_program->getProgram());
-    VAOGuard vao_guard(m_vao);
-    glUniform3fv(m_program->getUniform("uColor"), 1, glm::value_ptr(m_color));
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
-  }
-};
-
-struct TexturedShape : public Shape {
-  const TextureLoader m_tl;
-  GLuint m_uv_vbo;
-  TexturedShape(std::vector<glm::vec2> vertices,
-      std::vector<glm::vec2> uvs, const std::string& fname,
-      std::shared_ptr<ShaderProgram> program) :
-      Shape(vertices, program), m_tl(fname) {
-    
-    ProgramGuard program_guard(m_program->getProgram());
-    VAOGuard vao_guard(m_vao);
-
-    m_program->debug();
-    m_uv_vbo = bufferStaticData(uvs, m_program->getAttribute("aTexCoord"));
-    glUniform1i(m_program->getUniform("uSampler"), 0);
-  };
-  virtual void draw() const {
-    ProgramGuard p_guard(m_program->getProgram());
-    VAOGuard v_guard(m_vao);
-    glActiveTexture(GL_TEXTURE0);
-    TextureLoader::TextureGuard t_guard(m_tl.getTexture());
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
-  }
-};
-
-void setUniforms(std::shared_ptr<ShaderProgram> program) {
-  ProgramGuard program_guard(program->getProgram());
-  glm::mat4 model(1.0f);
-  glUniformMatrix4fv(program->getUniform("uModelMatrix"), 1, false, glm::value_ptr(model));
-
-  glm::vec3 eye(4.0, 4.0, 3.0);
-  glm::vec3 center(0.0, 0.0, 0.0);
-  glm::vec3 up(0.0, 1.0, 0.0);
-  glm::mat4 view = glm::lookAt(eye, center, up);
-  glUniformMatrix4fv(program->getUniform("uViewMatrix"), 1, false, glm::value_ptr(view));
-
-  float aspect_ratio = static_cast<float>(mWidth) / static_cast<float>(mHeight);
-  glm::mat4 proj = glm::perspective(glm::radians(45.0f), aspect_ratio, 1.0f, 10.0f);
-  glUniformMatrix4fv(program->getUniform("uProjMatrix"), 1, false, glm::value_ptr(proj));
+  return shader;
 }
 
-void setup(std::vector<Shape*>& shapes) {
-
-  // oh boy, Windows paths seem relative to the CWD where the .exe was executed from.
-  auto program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\hello.vert",
-    "Glitter\\Shaders\\hello.frag");
-
-  auto textured_program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\texture.vert",
-    "Glitter\\Shaders\\texture.frag");
-
-  std::vector<glm::vec2> t1_vertices = {
-    {  0.0f,  0.5f },
-    {  0.5f, -0.5f },
-    { -0.5f, -0.5f }
-  };
-  std::vector<glm::vec2> t1_uvs = {
-    { 0.5, 1.0 },
-    { 1.0, 0.0 },
-    { 0.0, 0.0 }
-  };
-  //std::string texture_fname = "Glitter\\Textures\\android.jpg";
-  std::string texture_fname = "Glitter\\Textures\\container.jpg";
-  shapes.push_back(new TexturedShape(t1_vertices, t1_uvs, texture_fname, textured_program));
-  //glm::vec3 red = { 1.0, 0.0, 0.0 };
-  //shapes.push_back(new ColoredShape(t1_vertices, red, program));
-
-  std::vector<glm::vec2> t2_vertices = {
-    { 0.0f, -0.75f },
-    { -0.5f, 0.25f },
-    { 0.5f, 0.25f }
-  };
-  glm::vec3 green = { 0.0, 1.0, 0.0 };
-  shapes.push_back(new ColoredShape(t2_vertices, green, program));
-
-  std::vector<glm::vec2> s1_vertices = {
-    { -0.85, 0.85 },
-    { -0.65, 0.85 },
-    { -0.85, 0.65 },
-    { -0.65, 0.65 }
-  };
-  glm::vec3 blue = { 0.0, 0.0, 1.0 };
-  shapes.push_back(new ColoredShape(s1_vertices, blue, program));
-
-  setUniforms(program);
-  setUniforms(textured_program);
+static GLuint linkProgram(const GLchar* vertex_shader_src, const GLchar* fragment_shader_src) {
+  const GLuint program = glCreateProgram();
+  glAttachShader(program, compileShader(GL_VERTEX_SHADER, vertex_shader_src));
+  glAttachShader(program, compileShader(GL_FRAGMENT_SHADER, fragment_shader_src));
+  glLinkProgram(program);
+  GLint program_linked;
+  glGetProgramiv(program, GL_LINK_STATUS, &program_linked);
+  if (program_linked != GL_TRUE) {
+    GLsizei log_length = 0;
+    GLchar message[1024];
+    glGetProgramInfoLog(program, 1024, &log_length, message);
+    std::cout << message << std::endl;
+    // exit
+  }
+  return program;
 }
 
-void handle_input(GLFWwindow* const window, std::vector<Shape*>& shapes) {
-  if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-    glfwSetWindowShouldClose(window, true);
+// reads a file into a string
+static std::string fname_to_string(const std::string& fname) {
+  std::ifstream file(fname, std::ios::in | std::ios::binary);
+  if (file.is_open()) {
+    std::ostringstream stream;
+    stream << file.rdbuf();
+    file.close();
+    return stream.str();
   }
-  int up_pressed = glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS;
-  int down_pressed = glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS;
-  int left_pressed = glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS;
-  int right_pressed = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
-  bool dirty = up_pressed || down_pressed || left_pressed || right_pressed;
-  if (dirty) {
-    shapes.back()->move(glm::vec2(0.1 * static_cast<float>(right_pressed - left_pressed),
-      0.1 * static_cast<float>(up_pressed - down_pressed)));
+  // todo: use optional, or exit
+  std::cout << "failed to open file named: " << fname << std::endl;
+  return std::string();
+}
+
+static void setup() {
+  const std::string vert = "Glitter\\Shaders\\texture.vert";
+  const std::string frag = "Glitter\\Shaders\\texture.frag";
+  program = linkProgram(fname_to_string(vert).c_str(), fname_to_string(frag).c_str());
+  glUseProgram(program);
+
+  GLfloat vertices[] = {
+    // Positions          // Colors           // Texture Coords
+     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // Top Right
+     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // Bottom Right
+    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // Bottom Left
+    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // Top Left 
+  };
+  GLuint indices[] = {  // Note that we start from 0!
+    0, 1, 3, // First Triangle
+    1, 2, 3  // Second Triangle
+  };
+  glGenVertexArrays(1, &VAO);
+  glGenBuffers(1, &VBO);
+  glGenBuffers(1, &EBO);
+
+  glBindVertexArray(VAO);
+
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+  // Position attribute
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+  glEnableVertexAttribArray(0);
+  // Color attribute
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+  glEnableVertexAttribArray(1);
+  // TexCoord attribute
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+  glEnableVertexAttribArray(2);
+
+  glBindVertexArray(0); // Unbind VAO
+
+  // Load and create a texture 
+  glGenTextures(1, &texture1);
+  glBindTexture(GL_TEXTURE_2D, texture1); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
+                                          // Set our texture parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// Set texture wrapping to GL_REPEAT
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  // Set texture filtering
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // Load, create texture and generate mipmaps
+  int width, height, n;
+  unsigned char* data = stbi_load(texture_fname.c_str(), &width, &height, &n, 0);
+  if (data = nullptr) {
+    std::cout << "failed to load " << texture_fname << std::endl;
   }
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  stbi_image_free(data);
+  glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture when done, so we won't accidentily mess up our texture.
+}
+
+static void draw() {
+  // Activate shader
+  glUseProgram(program);
+
+  // Bind Textures using texture units
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture1);
+  glUniform1i(glGetUniformLocation(program, "ourTexture1"), 0);
+
+  // Draw container
+  glBindVertexArray(VAO);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  glBindVertexArray(0);
 }
 
 int main(int argc, char * argv[]) {
@@ -216,20 +165,19 @@ int main(int argc, char * argv[]) {
   gladLoadGL();
   fprintf(stderr, "OpenGL %s\n", glGetString(GL_VERSION));
 
-  std::vector<Shape*> shapes;
-  setup(shapes);
+  setup();
 
   // Rendering Loop
   while (glfwWindowShouldClose(mWindow) == false) {
-    handle_input(mWindow, shapes);
+    if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+      glfwSetWindowShouldClose(mWindow, true);
+    }
 
     // Background Fill Color
     glClearColor(0.25f, 0.5f, 0.25f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    for (const Shape* shape: shapes) {
-      shape->draw();
-    }
+    draw();
 
     // Flip Buffers and Draw
     glfwSwapBuffers(mWindow);

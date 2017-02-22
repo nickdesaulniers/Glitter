@@ -1,15 +1,14 @@
-#version 150
+#version 330 core
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 color;
+layout (location = 2) in vec2 texCoord;
 
-in vec4 aPosition;
-in vec2 aTexCoord;
+out vec2 TexCoord;
 
-uniform mat4 uModelMatrix;
-uniform mat4 uViewMatrix;
-uniform mat4 uProjMatrix;
-
-out vec2 vTexCoord;
-
-void main () {
-  gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * aPosition;
-  vTexCoord = aTexCoord;
+void main()
+{
+	gl_Position = vec4(position, 1.0f);
+	// We swap the y-axis by substracing our coordinates from 1. This is done because most images have the top y-axis inversed with OpenGL's top y-axis.
+	// TexCoord = texCoord;
+	TexCoord = vec2(texCoord.x, 1.0 - texCoord.y);
 }
