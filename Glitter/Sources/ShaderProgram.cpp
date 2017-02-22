@@ -85,7 +85,6 @@ void ShaderProgram::readUniforms() {
     GLint location = glGetUniformLocation(m_program, identifier);
     m_uniforms.emplace(identifier, location);
   }
-
 }
 
 ShaderProgram::ShaderProgram(const std::string& vertex_shader_fname, const std::string& fragment_shader_fname) {
@@ -105,4 +104,15 @@ GLint ShaderProgram::getAttribute(const std::string& name) {
 
 GLint ShaderProgram::getUniform(const std::string & name) {
   return m_uniforms.at(name);
+}
+
+void ShaderProgram::debug() {
+  std::cout << "attributes:" << std::endl;
+  for (auto& it : m_attributes) {
+    std::cout << it.first << ": " << it.second << std::endl;
+  }
+  std::cout << "uniforms: " << std::endl;
+  for (auto& it : m_uniforms) {
+    std::cout << it.first << ": " << it.second << std::endl;
+  }
 }

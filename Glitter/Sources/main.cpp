@@ -38,13 +38,13 @@ struct Shape {
   std::shared_ptr<ShaderProgram> m_program;
   Shape(std::vector<glm::vec2> vertices, std::shared_ptr<ShaderProgram> program) :
       m_vertices(std::move(vertices)), m_program(program) {
-    glUseProgram(m_program->getProgram());
+    ProgramGuard program_guard(m_program->getProgram());
     glGenVertexArrays(1, &m_vao);
     VAOGuard vao_guard(m_vao);
 
     m_vertices_vbo = bufferStaticData(m_vertices, m_program->getAttribute("aPosition"));
 
-    print_vertices();
+    //print_vertices();
   }
   template <typename T>
   GLuint bufferStaticData(const std::vector<T>& data, const GLint attribute) const {
@@ -71,7 +71,7 @@ struct Shape {
     constexpr GLint elem_per_vertex = sizeof(glm::vec2) / sizeof(float);
     VBOGuard vbo_guard(m_vertices_vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, num_bytes, &m_vertices[0]);
-    print_vertices();
+    //print_vertices();
   }
   void move(const glm::vec2& dxdy) {
     for (auto& vertex : m_vertices) {
@@ -83,9 +83,8 @@ struct Shape {
 
 struct ColoredShape: public Shape {
   const glm::vec3 m_color;
-  std::shared_ptr<ShaderProgram> m_program;
   ColoredShape(std::vector<glm::vec2> vertices, glm::vec3 color, std::shared_ptr<ShaderProgram> program):
-      Shape(vertices, program), m_color(color), m_program(program) {};
+      Shape(vertices, program), m_color(color) {};
   virtual void draw() const {
     ProgramGuard program_guard(m_program->getProgram());
     VAOGuard vao_guard(m_vao);
@@ -94,7 +93,32 @@ struct ColoredShape: public Shape {
   }
 };
 
+struct TexturedShape : public Shape {
+  const TextureLoader m_tl;
+  GLuint m_uv_vbo;
+  TexturedShape(std::vector<glm::vec2> vertices,
+      std::vector<glm::vec2> uvs, const std::string& fname,
+      std::shared_ptr<ShaderProgram> program) :
+      Shape(vertices, program), m_tl(fname) {
+    
+    ProgramGuard program_guard(m_program->getProgram());
+    VAOGuard vao_guard(m_vao);
+
+    m_program->debug();
+    m_uv_vbo = bufferStaticData(uvs, m_program->getAttribute("aTexCoord"));
+    glUniform1i(m_program->getUniform("uSampler"), 0);
+  };
+  virtual void draw() const {
+    ProgramGuard p_guard(m_program->getProgram());
+    VAOGuard v_guard(m_vao);
+    glActiveTexture(GL_TEXTURE0);
+    TextureLoader::TextureGuard t_guard(m_tl.getTexture());
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, m_vertices.size());
+  }
+};
+
 void setUniforms(std::shared_ptr<ShaderProgram> program) {
+  ProgramGuard program_guard(program->getProgram());
   glm::mat4 model(1.0f);
   glUniformMatrix4fv(program->getUniform("uModelMatrix"), 1, false, glm::value_ptr(model));
 
@@ -115,13 +139,24 @@ void setup(std::vector<Shape*>& shapes) {
   auto program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\hello.vert",
     "Glitter\\Shaders\\hello.frag");
 
+  auto textured_program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\texture.vert",
+    "Glitter\\Shaders\\texture.frag");
+
   std::vector<glm::vec2> t1_vertices = {
     {  0.0f,  0.5f },
     {  0.5f, -0.5f },
     { -0.5f, -0.5f }
   };
-  glm::vec3 red = { 1.0, 0.0, 0.0 };
-  shapes.push_back( new ColoredShape(t1_vertices, red, program));
+  std::vector<glm::vec2> t1_uvs = {
+    { 0.5, 1.0 },
+    { 1.0, 0.0 },
+    { 0.0, 0.0 }
+  };
+  //std::string texture_fname = "Glitter\\Textures\\android.jpg";
+  std::string texture_fname = "Glitter\\Textures\\container.jpg";
+  shapes.push_back(new TexturedShape(t1_vertices, t1_uvs, texture_fname, textured_program));
+  //glm::vec3 red = { 1.0, 0.0, 0.0 };
+  //shapes.push_back(new ColoredShape(t1_vertices, red, program));
 
   std::vector<glm::vec2> t2_vertices = {
     { 0.0f, -0.75f },
@@ -141,6 +176,7 @@ void setup(std::vector<Shape*>& shapes) {
   shapes.push_back(new ColoredShape(s1_vertices, blue, program));
 
   setUniforms(program);
+  setUniforms(textured_program);
 }
 
 void handle_input(GLFWwindow* const window, std::vector<Shape*>& shapes) {
