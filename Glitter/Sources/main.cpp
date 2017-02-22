@@ -106,7 +106,7 @@ struct TexturedShape : public Shape {
 
     m_program->debug();
     m_uv_vbo = bufferStaticData(uvs, m_program->getAttribute("aTexCoord"));
-    glUniform1i(m_program->getUniform("uSampler"), 0);
+    //glUniform1i(m_program->getUniform("uSampler"), 0);
   };
   virtual void draw() const {
     ProgramGuard p_guard(m_program->getProgram());
