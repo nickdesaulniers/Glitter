@@ -6,6 +6,7 @@ public:
   GLuint getProgram() const;
   GLint getAttribute(const std::string& name);
   GLint getUniform(const std::string& name);
+  void debug();
 private:
   std::unordered_map<std::string, const GLint> m_attributes;
   std::unordered_map<std::string, const GLint> m_uniforms;
