@@ -8,7 +8,7 @@
 TextureLoader::TextureLoader(const std::string & fname) {
   int width, height, n;
   unsigned char* data = stbi_load(fname.c_str(), &width, &height, &n, 0);
-  if (data = nullptr) {
+  if (data == nullptr) {
     std::cout << "failed to load " << fname << std::endl;
   }
   std::cout << "loaded image " << fname << " " << width << ", " << height << ", " << n << std::endl;
