@@ -15,7 +15,7 @@ static GLuint compileShader(const GLenum shader_type, const GLchar* shader_src) 
     GLchar message[1024];
     glGetShaderInfoLog(shader, 1024, &log_length, message);
     std::cout << message << std::endl;
-    // exit
+    throw std::runtime_error(message);
   }
   return shader;
 }
@@ -32,7 +32,7 @@ static GLuint linkProgram(const GLchar* vertex_shader_src, const GLchar* fragmen
     GLchar message[1024];
     glGetProgramInfoLog(program, 1024, &log_length, message);
     std::cout << message << std::endl;
-    // exit
+    throw std::runtime_error(message);
   }
   return program;
 }
@@ -46,9 +46,7 @@ static std::string fname_to_string(const std::string& fname) {
     file.close();
     return stream.str();
   }
-  // todo: use optional, or exit
-  std::cout << "failed to open file named: " << fname << std::endl;
-  return std::string();
+  throw std::runtime_error("unable to open file named: " + fname);
 }
 
 void ShaderProgram::readAttributes() {

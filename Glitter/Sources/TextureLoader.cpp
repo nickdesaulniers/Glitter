@@ -10,6 +10,7 @@ TextureLoader::TextureLoader(const std::string & fname) {
   unsigned char* data = stbi_load(fname.c_str(), &width, &height, &n, 0);
   if (data == nullptr) {
     std::cout << "failed to load " << fname << std::endl;
+    throw std::runtime_error("failed to load texture: " + fname);
   }
   std::cout << "loaded image " << fname << " " << width << ", " << height << ", " << n << std::endl;
   glActiveTexture(GL_TEXTURE0); // where does this go?

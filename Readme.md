@@ -1,5 +1,12 @@
 Trying to make cross platform OpenGL.
 
+##checking out
+`git clone --recursive `
+
+##Installing dependencies
+##Linux
+`sudo apt install libx11-dev xorg-dev cmake g++`
+
 ## Building
 ### Windows
 ```sh
