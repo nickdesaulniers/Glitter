@@ -135,15 +135,15 @@ void setUniforms(std::shared_ptr<ShaderProgram> program) {
 
 void setup(std::vector<Shape*>& shapes) {
 
-  auto program = std::make_shared<ShaderProgram>("Glitter/Shaders/hello.vert",
-    "Glitter/Shaders/hello.frag");
+  auto program = std::make_shared<ShaderProgram>("hello.vert",
+    "hello.frag");
   // oh boy, Windows paths seem relative to the CWD where the .exe was executed from.
   //auto program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\hello.vert",
   //  "Glitter\\Shaders\\hello.frag");
 
   auto textured_program = std::make_shared<ShaderProgram>(
-    "Glitter/Shaders/texture.vert",
-    "Glitter/Shaders/texture.frag");
+    "texture.vert",
+    "texture.frag");
   //auto textured_program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\texture.vert",
   //  "Glitter\\Shaders\\texture.frag");
 
@@ -159,7 +159,7 @@ void setup(std::vector<Shape*>& shapes) {
   };
   //std::string texture_fname = "Glitter\\Textures\\android.jpg";
   //std::string texture_fname = "Glitter\\Textures\\container.jpg";
-  std::string texture_fname = "Glitter/Textures/container.jpg";
+  std::string texture_fname = "container.jpg";
   shapes.push_back(new TexturedShape(t1_vertices, t1_uvs, texture_fname, textured_program));
   //glm::vec3 red = { 1.0, 0.0, 0.0 };
   //shapes.push_back(new ColoredShape(t1_vertices, red, program));

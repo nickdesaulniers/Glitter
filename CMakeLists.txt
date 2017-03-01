@@ -63,3 +63,11 @@ target_link_libraries(${PROJECT_NAME} assimp glfw
                       BulletDynamics BulletCollision LinearMath)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME})
+
+# copy shaders and textures to build dir
+file(GLOB copied_files "Glitter/Shaders/*" "Glitter/Textures/*")
+message("files: ${copied_files}")
+#configure_file("Glitter/Shaders/hello.vert" "${CMAKE_BINARY_DIR}/${PROJECT_NAME}/hello.vert" COPYONLY)
+foreach(file2 ${copied_files})
+  configure_file("${file2}" "${CMAKE_BINARY_DIR}/${PROJECT_NAME}" COPYONLY)
+endforeach()
