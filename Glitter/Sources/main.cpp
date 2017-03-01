@@ -68,7 +68,6 @@ struct Shape {
   }
   void rebuffer_vertices() {
     const GLsizeiptr num_bytes = m_vertices.size() * sizeof(glm::vec2);
-    constexpr GLint elem_per_vertex = sizeof(glm::vec2) / sizeof(float);
     VBOGuard vbo_guard(m_vertices_vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, num_bytes, &m_vertices[0]);
     //print_vertices();
@@ -104,7 +103,7 @@ struct TexturedShape : public Shape {
     ProgramGuard program_guard(m_program->getProgram());
     VAOGuard vao_guard(m_vao);
 
-    m_program->debug();
+    //m_program->debug();
     m_uv_vbo = bufferStaticData(uvs, m_program->getAttribute("aTexCoord"));
     glUniform1i(m_program->getUniform("uSampler"), 0);
   };
@@ -122,66 +121,43 @@ void setUniforms(std::shared_ptr<ShaderProgram> program) {
   glm::mat4 model(1.0f);
   glUniformMatrix4fv(program->getUniform("uModelMatrix"), 1, false, glm::value_ptr(model));
 
-  glm::vec3 eye(4.0, 4.0, 3.0);
+  glm::vec3 eye(0.0, 0.0, 1.0);
   glm::vec3 center(0.0, 0.0, 0.0);
   glm::vec3 up(0.0, 1.0, 0.0);
   glm::mat4 view = glm::lookAt(eye, center, up);
   glUniformMatrix4fv(program->getUniform("uViewMatrix"), 1, false, glm::value_ptr(view));
 
-  float aspect_ratio = static_cast<float>(mWidth) / static_cast<float>(mHeight);
-  glm::mat4 proj = glm::perspective(glm::radians(45.0f), aspect_ratio, 1.0f, 10.0f);
+  //float aspect_ratio = static_cast<float>(mWidth) / static_cast<float>(mHeight);
+  //glm::mat4 proj = glm::perspective(glm::radians(45.0f), aspect_ratio, 1.0f, 10.0f);
+  glm::mat4 proj = glm::ortho(-1.0f, 1.0f,
+    -1.0f, 1.0f, -1.0f, 1.0f);
   glUniformMatrix4fv(program->getUniform("uProjMatrix"), 1, false, glm::value_ptr(proj));
 }
 
 void setup(std::vector<Shape*>& shapes) {
-
-  auto program = std::make_shared<ShaderProgram>("Glitter/Shaders/hello.vert",
-    "Glitter/Shaders/hello.frag");
-  // oh boy, Windows paths seem relative to the CWD where the .exe was executed from.
-  //auto program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\hello.vert",
-  //  "Glitter\\Shaders\\hello.frag");
-
   auto textured_program = std::make_shared<ShaderProgram>(
     "Glitter/Shaders/texture.vert",
     "Glitter/Shaders/texture.frag");
-  //auto textured_program = std::make_shared<ShaderProgram>("Glitter\\Shaders\\texture.vert",
-  //  "Glitter\\Shaders\\texture.frag");
 
   std::vector<glm::vec2> t1_vertices = {
-    {  0.0f,  0.5f },
-    {  0.5f, -0.5f },
-    { -0.5f, -0.5f }
+    { -1.0,  1.0 },
+    {  1.0,  1.0 },
+    { -1.0, -1.0 },
+    {  1.0, -1.0 }
   };
   std::vector<glm::vec2> t1_uvs = {
-    { 0.5, 1.0 },
+    { 0.0, 0.0 },
     { 1.0, 0.0 },
-    { 0.0, 0.0 }
+    { 0.0, 1.0 },
+    { 1.0, 1.0 }
   };
   //std::string texture_fname = "Glitter\\Textures\\android.jpg";
   //std::string texture_fname = "Glitter\\Textures\\container.jpg";
-  std::string texture_fname = "Glitter/Textures/container.jpg";
-  shapes.push_back(new TexturedShape(t1_vertices, t1_uvs, texture_fname, textured_program));
-  //glm::vec3 red = { 1.0, 0.0, 0.0 };
-  //shapes.push_back(new ColoredShape(t1_vertices, red, program));
+  std::string texture_fname = "Glitter/Textures/uvgrid.jpg";
+  shapes.push_back(new TexturedShape(t1_vertices, t1_uvs, texture_fname,
+    textured_program));
 
-  std::vector<glm::vec2> t2_vertices = {
-    { 0.0f, -0.75f },
-    { -0.5f, 0.25f },
-    { 0.5f, 0.25f }
-  };
-  glm::vec3 green = { 0.0, 1.0, 0.0 };
-  shapes.push_back(new ColoredShape(t2_vertices, green, program));
-
-  std::vector<glm::vec2> s1_vertices = {
-    { -0.85, 0.85 },
-    { -0.65, 0.85 },
-    { -0.85, 0.65 },
-    { -0.65, 0.65 }
-  };
-  glm::vec3 blue = { 0.0, 0.0, 1.0 };
-  shapes.push_back(new ColoredShape(s1_vertices, blue, program));
-
-  setUniforms(program);
+  //setUniforms(program);
   setUniforms(textured_program);
 }
 

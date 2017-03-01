@@ -60,7 +60,7 @@ void ShaderProgram::readAttributes() {
     GLchar identifier[80];
     GLint size;
     GLenum type;
-    
+
     glGetActiveAttrib(m_program, i, sizeof identifier, nullptr, &size, &type, identifier);
     GLint location = glGetAttribLocation(m_program, identifier);
     m_attributes.emplace(identifier, location);
@@ -78,7 +78,7 @@ void ShaderProgram::readUniforms() {
     GLchar identifier[80];
     GLint size;
     GLenum type;
-    
+
     glGetActiveUniform(m_program, i, sizeof identifier, nullptr, &size, &type, identifier);
     GLint location = glGetUniformLocation(m_program, identifier);
     m_uniforms.emplace(identifier, location);
